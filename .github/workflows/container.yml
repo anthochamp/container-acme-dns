@@ -95,9 +95,9 @@ jobs:
             name=ghcr.io/${{ env.GHCR_IMAGE_NAME }}
           tags: |
             type=edge
-            type=semver,pattern={{version}}+acme.sh${{ env.ACME_SH_VERSION }}
-            type=semver,pattern={{major}}.{{minor}}+acme.sh${{ env.ACME_SH_VERSION }}
-            type=semver,pattern={{major}}+acme.sh${{ env.ACME_SH_VERSION }},enable=${{ !startsWith(github.ref, 'refs/tags/v0.') }}
+            type=semver,pattern={{version}}+acmesh${{ env.ACME_SH_VERSION }}
+            type=semver,pattern={{major}}.{{minor}}+acmesh${{ env.ACME_SH_VERSION }}
+            type=semver,pattern={{major}}+acmesh${{ env.ACME_SH_VERSION }},enable=${{ !startsWith(github.ref, 'refs/tags/v0.') }}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}},enable=${{ !startsWith(github.ref, 'refs/tags/v0.') }}
