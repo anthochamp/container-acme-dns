@@ -1,10 +1,6 @@
 #!/usr/bin/env sh
 set -eu
 
-if [ "$1" != "crond" ]; then
-	exec "$@"
-fi
-
 # shellcheck disable=SC2120,SC3043
 replaceEnvSecrets() {
 	# replaceEnvSecrets 1.0.0
@@ -47,6 +43,10 @@ export ACME_DNS_CERT_KEY_FILE="${ACME_DNS_CERT_KEY_FILE:-/cert/key.pem}"
 
 if [ -n "$ACME_DNS_PROVIDER_ENV_PREFIX" ]; then
 	replaceEnvSecrets "$ACME_DNS_PROVIDER_ENV_PREFIX"
+fi
+
+if [ "$1" != "crond" ]; then
+	exec "$@"
 fi
 
 if [ -z "$ACME_DNS_PROVIDER" ]; then

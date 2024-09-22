@@ -6,8 +6,8 @@
 		"biome:check": "biome check --error-on-warnings",
 		"biome:fix": "biome check --write",
 		"biome:fix-unsafe": "biome check --write --unsafe",
-		"markdownlint:check": "markdownlint -p .gitignore '**/*.md' '**/*.mdx'",
-		"markdownlint:fix": "markdownlint -p .gitignore --fix '**/*.md' '**/*.mdx'",
+		"markdownlint:check": "markdownlint-cli2",
+		"markdownlint:fix": "markdownlint-cli2 --fix",
 		"postinstall": "is-ci || lefthook install"
 	},
 	"devDependencies": {
@@ -17,12 +17,13 @@
 		"find-up": "7.0.0",
 		"typescript": "5.6.2",
 		"lefthook": "1.7.15",
-		"markdownlint-cli": "0.41.0",
+		"markdownlint-cli2": "0.14.0",
 		"is-ci": "3.0.1",
 		"@ac-essentials/tsconfig": "0.1.1",
 		"@ac-essentials/docker-cli": "0.1.2",
 		"@ac-essentials/find-git-dir": "0.1.2",
 		"@ac-essentials/misc-util": "0.1.2",
-		"@ac-essentials/biome-config": "0.1.0"
+		"@ac-essentials/biome-config": "0.1.0",
+		"@ac-essentials/markdownlint-cli2-config": "0.1.0"
 	}
 }
