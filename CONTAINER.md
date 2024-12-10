@@ -18,27 +18,33 @@ Sources are available on [GitHub](https://github.com/anthochamp/container-acme-d
 
 ## Configuration
 
-###  ACME_DNS_ACME_SERVER
+As an alternative to passing sensitive information via environment variables, `__FILE` may be appended to any of the listed environment variables below, causing the initialization script to load the values for those variables from files present in the container.
+
+In particular, this can be used to load values from Docker secrets stored in `/run/secrets/<secret_name>` files. For example : `ACME_DNS_ACME_ACCOUNT__FILE=/run/secrets/acme_account`.
+
+### ACME_DNS_ACME_SERVER
 
 **Default**: `letsencrypt`
 
-###  ACME_DNS_ACME_ACCOUNT
+Refer to the [acme.sh official documentation](https://github.com/acmesh-official/acme.sh/wiki/Server) for the possible values.
+
+### ACME_DNS_ACME_ACCOUNT
 
 **Default**: *empty* (optional)
 
-###  ACME_DNS_PROVIDER
+### ACME_DNS_PROVIDER
 
 **Default**: *empty*
 
-Refer to [acme official documentation](https://github.com/acmesh-official/acme.sh/wiki/dnsapi) for possible values.
+Refer to [acme.sh official documentation](https://github.com/acmesh-official/acme.sh/wiki/dnsapi) for the possible values.
 
-###  ACME_DNS_PROVIDER_ENV_PREFIX
+### ACME_DNS_PROVIDER_ENV_PREFIX
 
 **Default**: *empty*
 
-extra environment variables prefix
+When you need to pass additional environment variables to acme.sh and want to get support for the `__FILE` feature on those, you can pass the environment variables prefix here. This is especially useful for DNS credentials.
 
-###  ACME_DNS_CERT_KEY_LENGTH
+### ACME_DNS_CERT_KEY_LENGTH
 
 **Default**: `2048`
 
@@ -51,11 +57,13 @@ extra environment variables prefix
 | `3072` | RSA 3072 |
 | `4096` | RSA 4096 |
 
-###  ACME_DNS_CERT_DOMAINS
+### ACME_DNS_CERT_DOMAINS
 
 **Default**: *empty*
 
-List of space-separated domains
+List of space-separated domains (common name and SANs).
+
+For example, with `ACME_DNS_CERT_DOMAINS="foo.com *.foo.com bar.net *.bar.net"`, the common name will be `foo.com` with three SANs `*.foo.com`, `bar.net` and `*.bar.net`
 
 ###  ACME_DNS_CERT_FILE
 
