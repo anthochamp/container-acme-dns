@@ -1,4 +1,6 @@
 {
 	"$schema": "https://docs.renovatebot.com/renovate-schema.json",
-	"extends": ["github>anthochamp/config-presets//renovate/container"]
+	"extends": [
+		"github>anthochamp/dev-toolbox//config-presets/renovate/container"
+	]
 }
