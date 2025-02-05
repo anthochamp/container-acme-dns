@@ -1,0 +1,11 @@
+name: Validate container project
+
+on:
+  push:
+    branches: [ 'main', 'v[0-9]+', 'v[0-9]+.[0-9]+' ]
+    tags-ignore: [ 'v[0-9]+.[0-9]+.[0-9]+' ]
+  pull_request:
+
+jobs:
+  container-validate:
+    uses: anthochamp/dev-toolbox/.github/workflows/container-validate.yml@b64b9f099acc49e9de34203f3f2c296ab625b7b5
