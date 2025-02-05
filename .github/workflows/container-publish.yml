@@ -17,6 +17,8 @@ jobs:
       ghcr-image-name: ${{ steps.ghcr-image-name.outputs.GHCR_IMAGE_NAME }}
       dhub-image-name: ${{ steps.dhub-image-name.outputs.DHUB_IMAGE_NAME }}
     steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+
       - name: Find out acme.sh version
         id: acme-sh-version
         run: echo "ACME_SH_VERSION=$(scripts/acme-sh-version.sh src)" >> $GITHUB_OUTPUT
