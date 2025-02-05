@@ -7,7 +7,7 @@ on:
 
 jobs:
   container-validate:
-    uses: anthochamp/dev-toolbox/.github/workflows/container-validate.yml@2eead709de31e7dd50904b38c7bff6c6e16caeb5
+    uses: anthochamp/dev-toolbox/.github/workflows/container-validate.yml@47e334e5d1ebfef7be26a89673feb33c50c6baac
 
   container-pre-publish:
     needs: container-validate
@@ -34,9 +34,9 @@ jobs:
     permissions:
       packages: write
       id-token: write # used to complete the identity challenge with sigstore/fulcio
-    uses: anthochamp/dev-toolbox/.github/workflows/container-publish.yml@2eead709de31e7dd50904b38c7bff6c6e16caeb5
+    uses: anthochamp/dev-toolbox/.github/workflows/container-publish.yml@47e334e5d1ebfef7be26a89673feb33c50c6baac
     with:
-      working-directory: src
+      build-context: src
       additional-tags: |
         type=edge
         type=semver,pattern={{version}}+acmesh${{ needs.container-pre-publish.outputs.acme-sh-version }}
