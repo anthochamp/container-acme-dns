@@ -7,15 +7,14 @@ on:
 
 jobs:
   container-validate:
-    uses: anthochamp/dev-toolbox/.github/workflows/container-validate.yml@8bc77bcb4ed6d17c0ca1218e5447b2ac9b9b6bbb
+    uses: anthochamp/dev-toolbox/.github/workflows/container-validate.yml@2eead709de31e7dd50904b38c7bff6c6e16caeb5
 
   container-pre-publish:
     needs: container-validate
     runs-on: ubuntu-latest
     outputs:
       acme-sh-version: ${{ steps.acme-sh-version.outputs.ACME_SH_VERSION }}
-      ghcr-image-name: ${{ steps.ghcr-image-name.outputs.GHCR_IMAGE_NAME }}
-      dhub-image-name: ${{ steps.dhub-image-name.outputs.DHUB_IMAGE_NAME }}
+      container-image-name: ${{ steps.container-image-name.outputs.CONTAINER_IMAGE_NAME }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
@@ -23,18 +22,10 @@ jobs:
         id: acme-sh-version
         run: echo "ACME_SH_VERSION=$(scripts/acme-sh-version.sh src)" >> $GITHUB_OUTPUT
 
-      - name: Compose GitHub Container Repository image name
-        id: ghcr-image-name
-        run: echo "GHCR_IMAGE_NAME=$GH_REPO_OWNER/${GH_REPO_NAME#container-}" >> $GITHUB_OUTPUT
+      - name: Compose container repositories image name
+        id: container-image-name
+        run: echo "CONTAINER_IMAGE_NAME=${GH_REPO_NAME#container-}" >> $GITHUB_OUTPUT
         env:
-          GH_REPO_OWNER: ${{ github.repository_owner }}
-          GH_REPO_NAME: ${{ github.event.repository.name }}
-
-      - name: Compose Docker Hub repository image name
-        id: dhub-image-name
-        run: echo "DHUB_IMAGE_NAME=$DH_USERNAME/${GH_REPO_NAME#container-}" >> $GITHUB_OUTPUT
-        env:
-          DH_USERNAME: ${{ secrets.DHUB_USERNAME }}
           GH_REPO_NAME: ${{ github.event.repository.name }}
 
 
@@ -43,7 +34,7 @@ jobs:
     permissions:
       packages: write
       id-token: write # used to complete the identity challenge with sigstore/fulcio
-    uses: anthochamp/dev-toolbox/.github/workflows/container-publish.yml@8bc77bcb4ed6d17c0ca1218e5447b2ac9b9b6bbb
+    uses: anthochamp/dev-toolbox/.github/workflows/container-publish.yml@2eead709de31e7dd50904b38c7bff6c6e16caeb5
     with:
       working-directory: src
       additional-tags: |
@@ -51,9 +42,9 @@ jobs:
         type=semver,pattern={{version}}+acmesh${{ needs.container-pre-publish.outputs.acme-sh-version }}
         type=semver,pattern={{major}}.{{minor}}+acmesh${{ needs.container-pre-publish.outputs.acme-sh-version }}
         type=semver,pattern={{major}}+acmesh${{ needs.container-pre-publish.outputs.acme-sh-version }},enable=${{ !startsWith(github.ref, 'refs/tags/v0.') }}
-      dhub-image-name: ${{ needs.container-pre-publish.outputs.dhub-image-name }}
+      ghcr-image-name: ${{ needs.container-pre-publish.outputs.container-image-name }}
+      dhub-image-name: ${{ needs.container-pre-publish.outputs.container-image-name }}
       dhub-readme-file: ./CONTAINER.md
-      ghcr-image-name: ${{ needs.container-pre-publish.outputs.ghcr-image-name }}
     secrets:
       dhub-username: ${{ secrets.DHUB_USERNAME }}
       dhub-password: ${{ secrets.DHUB_PASSWORD }}
