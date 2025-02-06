@@ -33,10 +33,11 @@ jobs:
       - name: Find out embedded acme.sh version
         id: acme-sh-version
         run: |
-          echo "ACME_SH_VERSION=$(scripts/acme-sh-version.sh $BUILD_CONTEXT)" >> $GITHUB_OUTPUT
-          tmp=( ${ACME_SH_VERSION//./ } )
-          echo "ACME_SH_VERSION_MAJOR=${tmp[0]}" >> $GITHUB_OUTPUT
-          echo "ACME_SH_VERSION_MINOR=${tmp[1]}" >> $GITHUB_OUTPUT
+          version=$(scripts/acme-sh-version.sh $BUILD_CONTEXT)
+          echo "ACME_SH_VERSION=$version" >> $GITHUB_OUTPUT
+          versionArray=( ${version//./ } )
+          echo "ACME_SH_VERSION_MAJOR=${versionArray[0]}" >> $GITHUB_OUTPUT
+          echo "ACME_SH_VERSION_MINOR=${versionArray[1]}" >> $GITHUB_OUTPUT
         env:
           BUILD_CONTEXT: ${{ inputs.build-context }}
 
