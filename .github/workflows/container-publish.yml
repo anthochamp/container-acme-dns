@@ -5,46 +5,34 @@ on:
     branches: [ main ] # edge
     tags: [ 'v[0-9]+.[0-9]+.[0-9]+' ] # versioned
 
+env:
+  DOCKERFILE_DIR: src
+  DHUB_README_FILE: ./CONTAINER.md
+
 jobs:
   container-validate:
     uses: anthochamp/dev-toolbox/.github/workflows/container-validate.yml@47e334e5d1ebfef7be26a89673feb33c50c6baac
 
-  container-pre-publish:
+  acme-dns-pre-publish:
     needs: container-validate
-    runs-on: ubuntu-latest
-    outputs:
-      acme-sh-version: ${{ steps.acme-sh-version.outputs.ACME_SH_VERSION }}
-      container-image-name: ${{ steps.container-image-name.outputs.CONTAINER_IMAGE_NAME }}
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-
-      - name: Find out acme.sh version
-        id: acme-sh-version
-        run: echo "ACME_SH_VERSION=$(scripts/acme-sh-version.sh src)" >> $GITHUB_OUTPUT
-
-      - name: Compose container repositories image name
-        id: container-image-name
-        run: echo "CONTAINER_IMAGE_NAME=${GH_REPO_NAME#container-}" >> $GITHUB_OUTPUT
-        env:
-          GH_REPO_NAME: ${{ github.event.repository.name }}
-
+    uses: ./.github/workflows/acme-dns-pre-publish.yml
+    with:
+      build-context: $DOCKERFILE_DIR
 
   container-publish:
-    needs: [container-validate, container-pre-publish]
+    needs: [container-validate, acme-dns-pre-publish]
     permissions:
       packages: write
       id-token: write # used to complete the identity challenge with sigstore/fulcio
     uses: anthochamp/dev-toolbox/.github/workflows/container-publish.yml@47e334e5d1ebfef7be26a89673feb33c50c6baac
     with:
-      build-context: src
+      build-context: $DOCKERFILE_DIR
       additional-tags: |
         type=edge
-        type=semver,pattern={{version}}+acmesh${{ needs.container-pre-publish.outputs.acme-sh-version }}
-        type=semver,pattern={{major}}.{{minor}}+acmesh${{ needs.container-pre-publish.outputs.acme-sh-version }}
-        type=semver,pattern={{major}}+acmesh${{ needs.container-pre-publish.outputs.acme-sh-version }},enable=${{ !startsWith(github.ref, 'refs/tags/v0.') }}
-      ghcr-image-name: ${{ needs.container-pre-publish.outputs.container-image-name }}
-      dhub-image-name: ${{ needs.container-pre-publish.outputs.container-image-name }}
-      dhub-readme-file: ./CONTAINER.md
+        ${{ needs.acme-dns-pre-publish.outputs.additional-tags }}
+      ghcr-image-name: ${{ needs.acme-dns-pre-publish.outputs.container-image-name }}
+      dhub-image-name: ${{ needs.acme-dns-pre-publish.outputs.container-image-name }}
+      dhub-readme-file: $DHUB_README_FILE
     secrets:
       dhub-username: ${{ secrets.DHUB_USERNAME }}
       dhub-password: ${{ secrets.DHUB_PASSWORD }}

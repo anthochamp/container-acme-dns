@@ -1,0 +1,47 @@
+name: Acme-dns container pre-publish
+
+on:
+  workflow_call:
+    inputs:
+      build-context:
+        description: Build's context is the set of files located in the specified PATH or URL
+        required: false
+        type: string
+    outputs:
+      additional-tags:
+        value: |
+          type=semver,pattern={{version}}+acmesh${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version }}
+          type=semver,pattern={{major}}.{{minor}}+acmesh${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version }}
+          type=semver,pattern={{major}}+acmesh${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version }},enable=${{ !startsWith(github.ref, 'refs/tags/v0.') }}
+          type=semver,pattern=acmesh${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version }}
+          type=semver,pattern=acmesh${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version-major }}.${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version-minor }}
+          type=semver,pattern=acmesh${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version-major }},enable=${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version-major != '0' }}
+      container-image-name:
+        value: ${{ jobs.acme-dns-pre-publish.outputs.container-image-name }}
+
+jobs:
+  acme-dns-pre-publish:
+    runs-on: ubuntu-latest
+    outputs:
+      acme-sh-version: ${{ steps.acme-sh-version.outputs.ACME_SH_VERSION }}
+      acme-sh-version-major: ${{ steps.acme-sh-version.outputs.ACME_SH_VERSION_MAJOR }}
+      acme-sh-version-minor: ${{ steps.acme-sh-version.outputs.ACME_SH_VERSION_MINOR }}
+      container-image-name: ${{ steps.container-image-name.outputs.CONTAINER_IMAGE_NAME }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+
+      - name: Find out embedded acme.sh version
+        id: acme-sh-version
+        run: |
+          echo "ACME_SH_VERSION=$(scripts/acme-sh-version.sh $BUILD_CONTEXT)" >> $GITHUB_OUTPUT
+          tmp=( ${ACME_SH_VERSION//./ } )
+          echo "ACME_SH_VERSION_MAJOR=${tmp[0]}" >> $GITHUB_OUTPUT
+          echo "ACME_SH_VERSION_MINOR=${tmp[1]}" >> $GITHUB_OUTPUT
+        env:
+          BUILD_CONTEXT: ${{ inputs.build-context }}
+
+      - name: Compose container image name
+        id: container-image-name
+        run: echo "CONTAINER_IMAGE_NAME=${REPO_NAME#container-}" >> $GITHUB_OUTPUT
+        env:
+          REPO_NAME: ${{ github.event.repository.name }}
