@@ -5,10 +5,6 @@ on:
     branches: [ main ] # edge
     tags: [ 'v[0-9]+.[0-9]+.[0-9]+' ] # versioned
 
-env:
-  DOCKERFILE_DIR: src
-  DHUB_README_FILE: ./CONTAINER.md
-
 jobs:
   container-validate:
     uses: anthochamp/dev-toolbox/.github/workflows/container-validate.yml@47e334e5d1ebfef7be26a89673feb33c50c6baac
@@ -17,7 +13,7 @@ jobs:
     needs: container-validate
     uses: ./.github/workflows/acme-dns-pre-publish.yml
     with:
-      build-context: $DOCKERFILE_DIR
+      build-context: src
 
   container-publish:
     needs: [container-validate, acme-dns-pre-publish]
@@ -26,13 +22,13 @@ jobs:
       id-token: write # used to complete the identity challenge with sigstore/fulcio
     uses: anthochamp/dev-toolbox/.github/workflows/container-publish.yml@47e334e5d1ebfef7be26a89673feb33c50c6baac
     with:
-      build-context: $DOCKERFILE_DIR
+      build-context: src
       additional-tags: |
         type=edge
         ${{ needs.acme-dns-pre-publish.outputs.additional-tags }}
       ghcr-image-name: ${{ needs.acme-dns-pre-publish.outputs.container-image-name }}
       dhub-image-name: ${{ needs.acme-dns-pre-publish.outputs.container-image-name }}
-      dhub-readme-file: $DHUB_README_FILE
+      dhub-readme-file: ./CONTAINER.md
     secrets:
       dhub-username: ${{ secrets.DHUB_USERNAME }}
       dhub-password: ${{ secrets.DHUB_PASSWORD }}
