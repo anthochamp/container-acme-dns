@@ -27,10 +27,10 @@ on:
           type=raw,value=${{ jobs.acme-dns-pre-publish.outputs.git-tag-version }}+acmesh${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version }},enabled=${{ jobs.acme-dns-pre-publish.outputs.git-tag-version != '' }}
           type=raw,value=${{ jobs.acme-dns-pre-publish.outputs.git-tag-version-major }}.${{ jobs.acme-dns-pre-publish.outputs.git-tag-version-minor }}+acmesh${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version }},enabled=${{ jobs.acme-dns-pre-publish.outputs.git-tag-version-minor != '' }}
           type=raw,value=${{ jobs.acme-dns-pre-publish.outputs.git-tag-version-major }}+acmesh${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version }},enabled=${{ jobs.acme-dns-pre-publish.outputs.git-tag-version-minor != '' && jobs.acme-dns-pre-publish.outputs.git-tag-version-minor != '0' }}
+          type=raw,value=acmesh${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version }}
+          type=raw,value=acmesh${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version-major }}.${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version-minor }}
+          type=raw,value=acmesh${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version-major }},enable=${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version-major != '0' }}
           type=raw,value=latest
-          type=raw,pattern=acmesh${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version }}
-          type=raw,pattern=acmesh${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version-major }}.${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version-minor }}
-          type=raw,pattern=acmesh${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version-major }},enable=${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version-major != '0' }}
       container-image-name:
         value: ${{ jobs.acme-dns-pre-publish.outputs.container-image-name }}
 
