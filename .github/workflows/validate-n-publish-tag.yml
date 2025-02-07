@@ -1,4 +1,4 @@
-name: Validate & publish
+name: Validate & publish (tag)
 
 on:
   push:
@@ -18,11 +18,10 @@ jobs:
     needs: validate
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.ref-version.outputs.VERSION }}
-
+      version: ${{ steps.event-ref-version.outputs.VERSION }}
     steps:
-      - name: Extract version from ref
-        id: ref-version
+      - name: Extract version from event ref
+        id: event-ref-version
         run: echo "VERSION=$(echo ${REF_NAME#v})" >>$GITHUB_OUTPUT
         env:
           REF_NAME: ${{ github.ref_name }}
@@ -32,7 +31,7 @@ jobs:
     permissions:
       packages: write
       id-token: write # used for sigstore/fulcio identity challenge
-    uses: ./.github/workflows/container-publish.yml
+    uses: anthochamp/dev-toolbox/.github/workflows/container-publish.yml@5fb0e7fda20a8d86a485ca2e32bb9bf99e53de07
     with:
       dockerfile-dir: src
       dhub-readme-file: ./CONTAINER.md

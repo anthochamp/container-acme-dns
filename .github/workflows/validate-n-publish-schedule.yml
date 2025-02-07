@@ -1,4 +1,4 @@
-name: Validate & publish (nightly)
+name: Validate & publish (schedule)
 
 on:
   schedule:
@@ -6,22 +6,7 @@ on:
 
 jobs:
   get-latest-version-tag:
-    runs-on: ubuntu-latest
-    outputs:
-      tag: ${{ steps.git-tagged-version.outputs.TAG }}
-      version: ${{ steps.git-tagged-version.outputs.VERSION }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          fetch-depth: 0
-
-      - name: Find out latest git tagged version
-        id: git-tagged-version
-        run: |
-          lastTag=$(for tag in $(git tag | grep -P 'v\d+\.\d+\.\d+'); do git describe --tags --match="$tag" --abbrev=0 2>/dev/null; done | sort -Vr | head -n1)
-          echo "TAG=$lastTag" >>$GITHUB_OUTPUT
-          echo "VERSION=${lastTag#v}" >>$GITHUB_OUTPUT
+    uses: anthochamp/dev-toolbox/.github/workflows/util-get-latest-git-version-tag.yml@5fb0e7fda20a8d86a485ca2e32bb9bf99e53de07
 
   validate:
     needs: get-latest-version-tag
@@ -41,7 +26,7 @@ jobs:
     permissions:
       packages: write
       id-token: write # used for sigstore/fulcio identity challenge
-    uses: ./.github/workflows/container-publish.yml
+    uses: anthochamp/dev-toolbox/.github/workflows/container-publish.yml@5fb0e7fda20a8d86a485ca2e32bb9bf99e53de07
     with:
       checkout-ref: ${{ needs.get-latest-version-tag.outputs.tag }}
       dockerfile-dir: src
