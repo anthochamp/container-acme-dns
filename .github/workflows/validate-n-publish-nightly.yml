@@ -1,0 +1,53 @@
+name: Validate & publish (nightly)
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  get-latest-version-tag:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.git-tagged-version.outputs.TAG }}
+      version: ${{ steps.git-tagged-version.outputs.VERSION }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Find out latest git tagged version
+        id: git-tagged-version
+        run: |
+          lastTag=$(for tag in $(git tag | grep -P 'v\d+\.\d+\.\d+'); do git describe --tags --match="$tag" --abbrev=0 2>/dev/null; done | sort -Vr | head -n1)
+          echo "TAG=$lastTag" >>$GITHUB_OUTPUT
+          echo "VERSION=${lastTag#v}" >>$GITHUB_OUTPUT
+
+  validate:
+    needs: get-latest-version-tag
+    uses: anthochamp/dev-toolbox/.github/workflows/container-validate.yml@36d45ce9f8e590f39d29858f04d073f94ebbb711
+    with:
+      checkout-ref: ${{ needs.get-latest-version-tag.outputs.tag }}
+
+  acme-dns-pre-publish:
+    needs: [validate, get-latest-version-tag]
+    uses: ./.github/workflows/acme-dns-pre-publish.yml
+    with:
+      checkout-ref: ${{ needs.get-latest-version-tag.outputs.tag }}
+      dockerfile-dir: src
+
+  publish:
+    needs: [validate, get-latest-version-tag, acme-dns-pre-publish]
+    uses: ./.github/workflows/container-publish.yml
+    with:
+      dockerfile-dir: src
+      dhub-readme-file: ./CONTAINER.md
+      version: ${{ needs.get-latest-version-tag.outputs.version }}
+      alt-version: ${{ needs.acme-dns-pre-publish.outputs.acme-sh-version }}
+      alt-version-prefix: acmesh
+      container-image-name: ${{ needs.acme-dns-pre-publish.outputs.container-image-name }}
+    secrets:
+      dhub-username: ${{ secrets.DHUB_USERNAME }}
+      dhub-password: ${{ secrets.DHUB_PASSWORD }}
+      ghcr-username: ${{ github.repository_owner }}
+      ghcr-password: ${{ secrets.GITHUB_TOKEN }}

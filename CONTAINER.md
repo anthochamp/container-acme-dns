@@ -4,11 +4,57 @@ Container images based on the official [acme.sh](https://github.com/acmesh-offic
 
 Sources are available on [GitHub](https://github.com/anthochamp/container-acme-dns).
 
+<!-- TOC tocDepth:2..3 chapterDepth:2..6 -->
+
+- [Image tags](#image-tags)
+- [How to use this image](#how-to-use-this-image)
+- [Volumes](#volumes)
+- [Configuration](#configuration)
+  - [ACME_DNS_ACME_SERVER](#acme_dns_acme_server)
+  - [ACME_DNS_ACME_ACCOUNT](#acme_dns_acme_account)
+  - [ACME_DNS_PROVIDER](#acme_dns_provider)
+  - [ACME_DNS_PROVIDER_ENV_PREFIX](#acme_dns_provider_env_prefix)
+  - [ACME_DNS_CERT_KEY_LENGTH](#acme_dns_cert_key_length)
+  - [ACME_DNS_CERT_DOMAINS](#acme_dns_cert_domains)
+  - [ACME_DNS_CERT_FILE](#acme_dns_cert_file)
+  - [ACME_DNS_CERT_FULLCHAIN_FILE](#acme_dns_cert_fullchain_file)
+  - [ACME_DNS_CERT_KEY_FILE](#acme_dns_cert_key_file)
+
+<!-- /TOC -->
+
 ## Image tags
 
-- `x.y.z`, `x.y` and `x` tags releases on multiple semver levels
-- `latest` tags the latest release
-- `edge` tags the image build automatically on the latest Git commit
+- `x.y.z-acmeshA.B.C` tags the `x.y.z` container image version, embedded with
+the acme.sh `A.B.C` version.
+- `edge-acmeshA.B.C` tags the container image built from the last repository
+commit, embedded with the acme.sh `A.B.C` version.
+
+Tags aliases :
+
+- `x.y-acmeshA.B.C` aliases the latest patch version of the container image `x.y`
+major+minor version, embedded with the acme.sh `A.B.C` version;
+- `x-acmeshA.B.C` aliases the latest minor+patch version of the container image
+`x` major version, embedded with the acme.sh `A.B.C` version;
+- `x.y.z` aliases the `x.y.z` container image version embedded with the latest
+acme.sh version (Note: only the latest container image version gets updated);
+- `x.y` aliases the latest patch version of the container image `x.y` major+minor
+version, embedded with the latest acme.sh release (Note: only the latest container
+image major+minor version gets updated);
+- `x` aliases the latest minor+patch version of the container image `x` major
+version, embedded with the latest acme.sh version (Note: only the latest container
+image major version gets updated);
+- `acmeshA.B` aliases the latest container image version, embedded with the latest
+patch version of the acme.sh `A.B` major+minor version;
+- `acmeshA` aliases the latest container image version, embedded with the latest
+minor+patch version of the acme.sh `A` major version;
+- `latest` aliases the latest `x.y.z-acmeshA.B.C` tag;
+- `edge-acmeshA.B` aliases the container image built from the last repository
+commit, embedded with the latest patch version of the acme.sh `A.B` major+minor
+version;
+- `edge-acmeshA` aliases the container image built from the last repository
+commit, embedded with the latest minor+patch version of the acme.sh `A` major
+version.
+- `edge` aliases the latest `edge-acmeshA.B.C` tag;
 
 ## How to use this image
 

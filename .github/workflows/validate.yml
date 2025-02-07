@@ -1,4 +1,4 @@
-name: Validate container project
+name: Validate
 
 on:
   push:
@@ -7,5 +7,5 @@ on:
   pull_request:
 
 jobs:
-  container-validate:
+  validate:
     uses: anthochamp/dev-toolbox/.github/workflows/container-validate.yml@b67d6c1e63fb221a1d8b696dadaa379a380a01c2

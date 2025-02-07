@@ -1,0 +1,44 @@
+name: Validate & publish
+
+on:
+  push:
+    tags: [ 'v[0-9]+.[0-9]+.[0-9]+' ]
+
+jobs:
+  validate:
+    uses: anthochamp/dev-toolbox/.github/workflows/container-validate.yml@36d45ce9f8e590f39d29858f04d073f94ebbb711
+
+  acme-dns-pre-publish:
+    needs: validate
+    uses: ./.github/workflows/acme-dns-pre-publish.yml
+    with:
+      dockerfile-dir: src
+
+  get-version:
+    needs: validate
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.ref-version.outputs.VERSION }}
+
+    steps:
+      - name: Extract version from ref
+        id: ref-version
+        run: echo "VERSION=$(echo ${REF#refs/tags/v})" >>$GITHUB_OUTPUT
+        env:
+          REF: ${{ github.ref }}
+
+  publish:
+    needs: [validate, acme-dns-pre-publish, get-version]
+    uses: ./.github/workflows/container-publish.yml
+    with:
+      dockerfile-dir: src
+      dhub-readme-file: ./CONTAINER.md
+      version: ${{ needs.get-version.outputs.version }}
+      alt-version: ${{ needs.acme-dns-pre-publish.outputs.acme-sh-version }}
+      alt-version-prefix: acmesh
+      container-image-name: ${{ needs.acme-dns-pre-publish.outputs.container-image-name }}
+    secrets:
+      dhub-username: ${{ secrets.DHUB_USERNAME }}
+      dhub-password: ${{ secrets.DHUB_PASSWORD }}
+      ghcr-username: ${{ github.repository_owner }}
+      ghcr-password: ${{ secrets.GITHUB_TOKEN }}
