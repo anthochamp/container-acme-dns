@@ -1,4 +1,4 @@
-name: Validate & publish (nightly)
+name: Validate & publish (edge)
 
 on:
   push:
