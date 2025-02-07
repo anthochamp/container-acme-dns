@@ -56,7 +56,6 @@ jobs:
       - name: Find out latest git tagged version
         id: git-tag-version
         run: |
-          echo "tags: $(git tag)"
           lastTag=$(for tag in $(git tag); do git describe --tags --match="$tag" --abbrev=0 2>/dev/null; done | sort -Vr | head -n1)
           version=$(echo "$lastTag" | cut -b2-)
           echo "VERSION=$version" >>$GITHUB_OUTPUT
