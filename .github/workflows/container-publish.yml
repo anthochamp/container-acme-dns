@@ -12,6 +12,10 @@ on:
       ghcr-password:
         required: true
     inputs:
+      checkout-ref:
+        description: The branch, tag or SHA to checkout. Defaults to the reference or SHA for that event.
+        required: false
+        type: string
       dockerfile-dir:
         description: Dockerfile directory
         required: false
@@ -43,6 +47,7 @@ on:
 
 jobs:
   check-version:
+    if: ${{ inputs.version != '' }}
     runs-on: ubuntu-latest
     outputs:
       version-already-exists: ${{ steps.check-full-version.outputs.RESULT }}
@@ -89,10 +94,10 @@ jobs:
         type=raw,priority=300,value=${{ inputs.alt-version-prefix }}${{ steps.versions.outputs.ALT_MAJOR }}.${{ steps.versions.outputs.ALT_MINOR }},enable=${{ needs.check-version.outputs.version-already-exists != '1' && inputs.alt-version != '' }}
         type=raw,priority=200,value=${{ inputs.alt-version-prefix }}${{ steps.versions.outputs.ALT_MAJOR }},enable=${{ needs.check-version.outputs.version-already-exists != '1' && inputs.alt-version != '' && steps.versions.outputs.ALT_MAJOR != '0' }}
         type=raw,priority=100,value=latest,enable=${{ needs.check-version.outputs.version-already-exists != '1' }}
-        type=raw,priority=40,value=edge-${{ inputs.alt-version-prefix }}${{ inputs.alt-version }},enable=${{ inputs.alt-version != '' }}
-        type=raw,priority=30,value=edge-${{ inputs.alt-version-prefix }}${{ steps.versions.outputs.ALT_MAJOR }}.${{ steps.versions.outputs.ALT_MINOR }},enable=${{ inputs.alt-version != '' }}
-        type=raw,priority=20,value=edge-${{ inputs.alt-version-prefix }}${{ steps.versions.outputs.ALT_MAJOR }},enable=${{ inputs.alt-version != '' && steps.versions.outputs.ALT_MAJOR != '0' }}
-        type=raw,priority=10,value=edge
+        type=raw,priority=40,value=edge-${{ inputs.alt-version-prefix }}${{ inputs.alt-version }},enable=${{ inputs.checkout-ref == '' && github.ref_type != 'tag' && inputs.alt-version != '' }}
+        type=raw,priority=30,value=edge-${{ inputs.alt-version-prefix }}${{ steps.versions.outputs.ALT_MAJOR }}.${{ steps.versions.outputs.ALT_MINOR }},enable=${{ inputs.checkout-ref == '' && github.ref_type != 'tag' && inputs.alt-version != '' }}
+        type=raw,priority=20,value=edge-${{ inputs.alt-version-prefix }}${{ steps.versions.outputs.ALT_MAJOR }},enable=${{ inputs.checkout-ref == '' && github.ref_type != 'tag' && inputs.alt-version != '' && steps.versions.outputs.ALT_MAJOR != '0' }}
+        type=raw,priority=10,value=edge,enable=${{ inputs.checkout-ref == '' && github.ref_type != 'tag' }}
     steps:
       - name: Decompose versions
         id: versions
@@ -110,11 +115,9 @@ jobs:
 
   container-build-n-push:
     needs: compose-container-tags
-    permissions:
-      packages: write
-      id-token: write # used for sigstore/fulcio identity challenge
     uses: anthochamp/dev-toolbox/.github/workflows/container-build-n-push.yml@b87dd1914b9a2ec455965b98a9e422e0bd391ed4
     with:
+      checkout-ref: ${{ inputs.checkout-ref }}
       build-context-dir: ${{ inputs.dockerfile-dir }}
       container-image-name: ${{ inputs.container-image-name }}
       container-tags: ${{ needs.compose-container-tags.outputs.container-tags }}
@@ -126,12 +129,15 @@ jobs:
 
   get-docker-hub-repo-desc:
     needs: container-build-n-push
+    if: ${{ github.ref_type == 'tag' }}
     runs-on: ubuntu-latest
     outputs:
       description: ${{ steps.package-json-desc.outputs.VALUE }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ inputs.checkout-ref }}
 
       - name: Extract description from package.json
         id: package-json-desc
@@ -142,6 +148,7 @@ jobs:
     needs: get-docker-hub-repo-desc
     uses: anthochamp/dev-toolbox/.github/workflows/misc-docker-hub-update-repo-desc.yml@36d45ce9f8e590f39d29858f04d073f94ebbb711
     with:
+      checkout-ref: ${{ inputs.checkout-ref }}
       readme-file: ${{ inputs.dhub-readme-file }}
       short-description: ${{ needs.get-docker-hub-repo-desc.outputs.description }}
     secrets:

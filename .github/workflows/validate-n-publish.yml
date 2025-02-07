@@ -23,12 +23,15 @@ jobs:
     steps:
       - name: Extract version from ref
         id: ref-version
-        run: echo "VERSION=$(echo ${REF#refs/tags/v})" >>$GITHUB_OUTPUT
+        run: echo "VERSION=$(echo ${REF_NAME#v})" >>$GITHUB_OUTPUT
         env:
-          REF: ${{ github.ref }}
+          REF_NAME: ${{ github.ref_name }}
 
   publish:
     needs: [validate, acme-dns-pre-publish, get-version]
+    permissions:
+      packages: write
+      id-token: write # used for sigstore/fulcio identity challenge
     uses: ./.github/workflows/container-publish.yml
     with:
       dockerfile-dir: src

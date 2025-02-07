@@ -1,8 +1,8 @@
 name: Validate & publish (nightly)
 
 on:
-  schedule:
-    - cron: '0 0 * * *'
+  push:
+    branches: [ main ]
 
 jobs:
   get-latest-version-tag:
@@ -26,14 +26,11 @@ jobs:
   validate:
     needs: get-latest-version-tag
     uses: anthochamp/dev-toolbox/.github/workflows/container-validate.yml@36d45ce9f8e590f39d29858f04d073f94ebbb711
-    with:
-      checkout-ref: ${{ needs.get-latest-version-tag.outputs.tag }}
 
   acme-dns-pre-publish:
     needs: [validate, get-latest-version-tag]
     uses: ./.github/workflows/acme-dns-pre-publish.yml
     with:
-      checkout-ref: ${{ needs.get-latest-version-tag.outputs.tag }}
       dockerfile-dir: src
 
   publish:
@@ -43,7 +40,6 @@ jobs:
       id-token: write # used for sigstore/fulcio identity challenge
     uses: ./.github/workflows/container-publish.yml
     with:
-      checkout-ref: ${{ needs.get-latest-version-tag.outputs.tag }}
       dockerfile-dir: src
       dhub-readme-file: ./CONTAINER.md
       version: ${{ needs.get-latest-version-tag.outputs.version }}
