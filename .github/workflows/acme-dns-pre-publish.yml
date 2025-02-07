@@ -48,9 +48,9 @@ jobs:
       git-tag-version-patch: ${{ steps.git-tag-version.outputs.PATCH }}
       container-image-name: ${{ steps.container-image-name.outputs.CONTAINER_IMAGE_NAME }}
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2.2.2
         with:
-          fetch-tags: true
+          fetch-depth: 0
 
       - name: Find out embedded acme.sh version
         id: acme-sh-version
