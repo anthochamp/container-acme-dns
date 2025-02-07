@@ -16,6 +16,9 @@ jobs:
     uses: ./.github/workflows/acme-dns-pre-publish.yml
     with:
       build-context: src
+    secrets:
+      dhub-username: ${{ secrets.DHUB_USERNAME }}
+      dhub-password: ${{ secrets.DHUB_PASSWORD }}
 
   container-publish:
     needs: [container-validate, acme-dns-pre-publish]
