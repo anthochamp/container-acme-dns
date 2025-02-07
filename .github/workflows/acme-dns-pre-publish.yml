@@ -10,16 +10,14 @@ on:
     outputs:
       container-tags:
         value: |
-          type=raw,priority=900,value=${{ jobs.acme-dns-pre-publish.outputs.git-tag-version }},enable=${{ jobs.acme-dns-pre-publish.outputs.git-tag-version != '' }}
-          type=raw,priority=900,value=${{ jobs.acme-dns-pre-publish.outputs.git-tag-version-major }}.${{ jobs.acme-dns-pre-publish.outputs.git-tag-version-minor }},enable=${{ jobs.acme-dns-pre-publish.outputs.git-tag-version-minor != '' }}
-          type=raw,priority=900,value=${{ jobs.acme-dns-pre-publish.outputs.git-tag-version-major }},enable=${{ jobs.acme-dns-pre-publish.outputs.git-tag-version-minor != '' && jobs.acme-dns-pre-publish.outputs.git-tag-version-minor != '0' }}
-          type=raw,priority=200,value=${{ jobs.acme-dns-pre-publish.outputs.git-tag-version }}+acmesh${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version }},enable=${{ jobs.acme-dns-pre-publish.outputs.git-tag-version != '' }}
-          type=raw,priority=200,value=${{ jobs.acme-dns-pre-publish.outputs.git-tag-version-major }}.${{ jobs.acme-dns-pre-publish.outputs.git-tag-version-minor }}+acmesh${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version }},enable=${{ jobs.acme-dns-pre-publish.outputs.git-tag-version-minor != '' }}
-          type=raw,priority=200,value=${{ jobs.acme-dns-pre-publish.outputs.git-tag-version-major }}+acmesh${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version }},enable=${{ jobs.acme-dns-pre-publish.outputs.git-tag-version-minor != '' && jobs.acme-dns-pre-publish.outputs.git-tag-version-minor != '0' }}
-          type=raw,priority=800,value=acmesh${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version }}
-          type=raw,priority=800,value=acmesh${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version-major }}.${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version-minor }}
-          type=raw,priority=800,value=acmesh${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version-major }},enable=${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version-major != '0' }}
-          type=raw,priority=1000,value=latest
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=semver,pattern={{major}},enable=${{ !startsWith(github.ref, 'refs/tags/v0.') }}
+          ${{ jobs.acme-dns-pre-publish.outputs.push-only-once-tags }}
+          type=raw,priority=700,value=acmesh${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version }}
+          type=raw,priority=700,value=acmesh${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version-major }}.${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version-minor }}
+          type=raw,priority=700,value=acmesh${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version-major }},enable=${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version-major != '0' }}
+          type=raw,priority=100,value=latest
       container-image-name:
         value: ${{ jobs.acme-dns-pre-publish.outputs.container-image-name }}
 
@@ -27,16 +25,19 @@ jobs:
   acme-dns-pre-publish:
     runs-on: ubuntu-latest
     outputs:
+      container-image-name: ${{ steps.container-image-name.outputs.VALUE }}
       acme-sh-version: ${{ steps.acme-sh-version.outputs.VERSION }}
       acme-sh-version-major: ${{ steps.acme-sh-version.outputs.MAJOR }}
       acme-sh-version-minor: ${{ steps.acme-sh-version.outputs.MINOR }}
       acme-sh-version-patch: ${{ steps.acme-sh-version.outputs.PATCH }}
-      git-tag-version: ${{ steps.git-tag-version.outputs.VERSION }}
-      git-tag-version-major: ${{ steps.git-tag-version.outputs.MAJOR }}
-      git-tag-version-minor: ${{ steps.git-tag-version.outputs.MINOR }}
-      git-tag-version-patch: ${{ steps.git-tag-version.outputs.PATCH }}
-      container-image-name: ${{ steps.container-image-name.outputs.CONTAINER_IMAGE_NAME }}
+      push-only-once-tags: ${{ steps.push-only-once-tags.outputs.VALUE }}
     steps:
+      - name: Compose container image name
+        id: container-image-name
+        run: echo "VALUE=${REPO_NAME#container-}" >>$GITHUB_OUTPUT
+        env:
+          REPO_NAME: ${{ github.event.repository.name }}
+
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
@@ -64,8 +65,26 @@ jobs:
           echo "MINOR=${versionArray[1]}" >>$GITHUB_OUTPUT
           echo "PATCH=${versionArray[2]}" >>$GITHUB_OUTPUT
 
-      - name: Compose container image name
-        id: container-image-name
-        run: echo "CONTAINER_IMAGE_NAME=${REPO_NAME#container-}" >> $GITHUB_OUTPUT
+      - name: Log into Docker Hub
+        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
+        with:
+          username: ${{ secrets.dhub-username }}
+          password: ${{ secrets.dhub-password }}
+
+      - name: Compose push-only-once container tags
+        id: push-only-once-tags
+        run: |
+          value=
+          if [ -n "$GIT_TAG_VERSION" ]; then
+            fullVersion="$GIT_TAG_VERSION+acmesh${{ steps.acme-sh-version.outputs.VERSION }}"
+
+            if docker manifest inspect ${{ secrets.dhub-username }}/${{ steps.container-image-name.outputs.VALUE }}:$version >/dev/null 2>/dev/null; then
+              value="$fullVersion
+          ${{ steps.git-tag-version.outputs.MAJOR }}.${{ steps.git-tag-version.outputs.MINOR }}+acmesh${{ steps.acme-sh-version.outputs.VERSION }}
+          type=raw,value=${{ steps.git-tag-version.outputs.MAJOR }}+acmesh${{ steps.acme-sh-version.outputs.VERSION }},enable=${{ steps.git-tag-version.outputs.MAJOR != '0' }}"
+            fi
+          fi
+
+          echo "VALUE=$value" >>$GITHUB_OUTPUT
         env:
-          REPO_NAME: ${{ github.event.repository.name }}
+          GIT_TAG_VERSION: ${{ steps.git-tag-version.outputs.VERSION }}
