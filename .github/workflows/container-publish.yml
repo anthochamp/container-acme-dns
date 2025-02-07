@@ -1,6 +1,8 @@
 name: Validate & publish container project
 
 on:
+  schedule:
+    - cron: '0 0 * * *' # nightly
   push:
     branches: [ main ] # edge
     tags: [ 'v[0-9]+.[0-9]+.[0-9]+' ] # versioned
@@ -20,17 +22,24 @@ jobs:
     permissions:
       packages: write
       id-token: write # used to complete the identity challenge with sigstore/fulcio
-    uses: anthochamp/dev-toolbox/.github/workflows/container-publish.yml@47e334e5d1ebfef7be26a89673feb33c50c6baac
+    uses: anthochamp/dev-toolbox/.github/workflows/container-publish.yml@ded58a4ac9ac94a16eda4fc27761d19c2fd806df
     with:
       build-context: src
-      additional-tags: |
-        type=edge
-        ${{ needs.acme-dns-pre-publish.outputs.additional-tags }}
+      container-tags: ${{ needs.acme-dns-pre-publish.outputs.container-tags }}
       ghcr-image-name: ${{ needs.acme-dns-pre-publish.outputs.container-image-name }}
       dhub-image-name: ${{ needs.acme-dns-pre-publish.outputs.container-image-name }}
-      dhub-readme-file: ./CONTAINER.md
     secrets:
       dhub-username: ${{ secrets.DHUB_USERNAME }}
       dhub-password: ${{ secrets.DHUB_PASSWORD }}
       ghcr-username: ${{ github.repository_owner }}
       ghcr-password: ${{ secrets.GITHUB_TOKEN }}
+
+  update-docker-hub-repo-desc:
+    needs: [container-validate, acme-dns-pre-publish]
+    uses: anthochamp/dev-toolbox/.github/workflows/misc-docker-hub-update-repo-desc.yml@ded58a4ac9ac94a16eda4fc27761d19c2fd806df
+    with:
+      readme-file: ./CONTAINER.md
+    secrets:
+      username: ${{ secrets.DHUB_USERNAME }}
+      password: ${{ secrets.DHUB_PASSWORD }}
+      repository: ${{ secrets.DHUB_USERNAME }}/${{ needs.acme-dns-pre-publish.outputs.container-image-name }}

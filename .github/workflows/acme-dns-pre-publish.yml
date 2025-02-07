@@ -8,14 +8,29 @@ on:
         required: false
         type: string
     outputs:
-      additional-tags:
+      container-tags:
+        # 1.2.3
+        # 1.2
+        # 1 (if != 0)
+        # 1.2.3+acmesh4.5.6
+        # 1.2+acmesh4.5.6
+        # 1+acmesh4.5.6 (if != 0)
+        # latest
+        #
+        # acmesh4.5.6
+        # acmesh4.5
+        # acmesh4
         value: |
-          type=semver,pattern={{version}}+acmesh${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version }}
-          type=semver,pattern={{major}}.{{minor}}+acmesh${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version }}
-          type=semver,pattern={{major}}+acmesh${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version }},enable=${{ !startsWith(github.ref, 'refs/tags/v0.') }}
-          type=semver,pattern=acmesh${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version }}
-          type=semver,pattern=acmesh${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version-major }}.${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version-minor }}
-          type=semver,pattern=acmesh${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version-major }},enable=${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version-major != '0' }}
+          type=raw,value=${{ jobs.acme-dns-pre-publish.outputs.git-tag-version }},enabled=${{ jobs.acme-dns-pre-publish.outputs.git-tag-version != '' }}
+          type=raw,value=${{ jobs.acme-dns-pre-publish.outputs.git-tag-version-major }}.${{ jobs.acme-dns-pre-publish.outputs.git-tag-version-minor }},enabled=${{ jobs.acme-dns-pre-publish.outputs.git-tag-version-minor != '' }}
+          type=raw,value=${{ jobs.acme-dns-pre-publish.outputs.git-tag-version-major }},enabled=${{ jobs.acme-dns-pre-publish.outputs.git-tag-version-minor != '' && jobs.acme-dns-pre-publish.outputs.git-tag-version-minor != '0' }}
+          type=raw,value=${{ jobs.acme-dns-pre-publish.outputs.git-tag-version }}+acmesh${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version }},enabled=${{ jobs.acme-dns-pre-publish.outputs.git-tag-version != '' }}
+          type=raw,value=${{ jobs.acme-dns-pre-publish.outputs.git-tag-version-major }}.${{ jobs.acme-dns-pre-publish.outputs.git-tag-version-minor }}+acmesh${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version }},enabled=${{ jobs.acme-dns-pre-publish.outputs.git-tag-version-minor != '' }}
+          type=raw,value=${{ jobs.acme-dns-pre-publish.outputs.git-tag-version-major }}+acmesh${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version }},enabled=${{ jobs.acme-dns-pre-publish.outputs.git-tag-version-minor != '' && jobs.acme-dns-pre-publish.outputs.git-tag-version-minor != '0' }}
+          type=raw,value=latest
+          type=raw,pattern=acmesh${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version }}
+          type=raw,pattern=acmesh${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version-major }}.${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version-minor }}
+          type=raw,pattern=acmesh${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version-major }},enable=${{ jobs.acme-dns-pre-publish.outputs.acme-sh-version-major != '0' }}
       container-image-name:
         value: ${{ jobs.acme-dns-pre-publish.outputs.container-image-name }}
 
@@ -23,9 +38,14 @@ jobs:
   acme-dns-pre-publish:
     runs-on: ubuntu-latest
     outputs:
-      acme-sh-version: ${{ steps.acme-sh-version.outputs.ACME_SH_VERSION }}
-      acme-sh-version-major: ${{ steps.acme-sh-version.outputs.ACME_SH_VERSION_MAJOR }}
-      acme-sh-version-minor: ${{ steps.acme-sh-version.outputs.ACME_SH_VERSION_MINOR }}
+      acme-sh-version: ${{ steps.acme-sh-version.outputs.VERSION }}
+      acme-sh-version-major: ${{ steps.acme-sh-version.outputs.MAJOR }}
+      acme-sh-version-minor: ${{ steps.acme-sh-version.outputs.MINOR }}
+      acme-sh-version-patch: ${{ steps.acme-sh-version.outputs.PATCH }}
+      git-tag-version: ${{ steps.acme-sh-version.outputs.VERSION }}
+      git-tag-version-major: ${{ steps.git-tag-version.outputs.MAJOR }}
+      git-tag-version-minor: ${{ steps.git-tag-version.outputs.MINOR }}
+      git-tag-version-patch: ${{ steps.git-tag-version.outputs.PATCH }}
       container-image-name: ${{ steps.container-image-name.outputs.CONTAINER_IMAGE_NAME }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
@@ -34,12 +54,24 @@ jobs:
         id: acme-sh-version
         run: |
           version=$(scripts/acme-sh-version.sh $BUILD_CONTEXT)
-          echo "ACME_SH_VERSION=$version" >> $GITHUB_OUTPUT
+          echo "VERSION=$version" >>$GITHUB_OUTPUT
           versionArray=( ${version//./ } )
-          echo "ACME_SH_VERSION_MAJOR=${versionArray[0]}" >> $GITHUB_OUTPUT
-          echo "ACME_SH_VERSION_MINOR=${versionArray[1]}" >> $GITHUB_OUTPUT
+          echo "MAJOR=${versionArray[0]}" >>$GITHUB_OUTPUT
+          echo "MINOR=${versionArray[1]}" >>$GITHUB_OUTPUT
+          echo "PATCH=${versionArray[2]}" >>$GITHUB_OUTPUT
         env:
           BUILD_CONTEXT: ${{ inputs.build-context }}
+
+      - name: Find out latest git tagged version
+        id: git-tag-version
+        run: |
+          lastTag=$(for tag in $(git tag); do git describe --tags --match="$tag" --abbrev=0 2>/dev/null; done | sort -Vr | head -n1)
+          version=$(echo "$lastTag" | cut -b2-)
+          echo "VERSION=$version" >>$GITHUB_OUTPUT
+          versionArray=(${version//./ })
+          echo "MAJOR=${versionArray[0]}" >>$GITHUB_OUTPUT
+          echo "MINOR=${versionArray[1]}" >>$GITHUB_OUTPUT
+          echo "PATCH=${versionArray[2]}" >>$GITHUB_OUTPUT
 
       - name: Compose container image name
         id: container-image-name
