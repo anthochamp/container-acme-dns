@@ -42,13 +42,15 @@ jobs:
       acme-sh-version-major: ${{ steps.acme-sh-version.outputs.MAJOR }}
       acme-sh-version-minor: ${{ steps.acme-sh-version.outputs.MINOR }}
       acme-sh-version-patch: ${{ steps.acme-sh-version.outputs.PATCH }}
-      git-tag-version: ${{ steps.acme-sh-version.outputs.VERSION }}
+      git-tag-version: ${{ steps.git-tag-version.outputs.VERSION }}
       git-tag-version-major: ${{ steps.git-tag-version.outputs.MAJOR }}
       git-tag-version-minor: ${{ steps.git-tag-version.outputs.MINOR }}
       git-tag-version-patch: ${{ steps.git-tag-version.outputs.PATCH }}
       container-image-name: ${{ steps.container-image-name.outputs.CONTAINER_IMAGE_NAME }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          fetch-tags: true
 
       - name: Find out embedded acme.sh version
         id: acme-sh-version
