@@ -5,7 +5,11 @@ on:
     branches: [ main ]
 
 jobs:
+  validate:
+    uses: anthochamp/dev-toolbox/.github/workflows/container-validate.yml@36d45ce9f8e590f39d29858f04d073f94ebbb711
+
   get-latest-version-tag:
+    needs: validate
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.git-tagged-version.outputs.TAG }}
@@ -23,12 +27,8 @@ jobs:
           echo "TAG=$lastTag" >>$GITHUB_OUTPUT
           echo "VERSION=${lastTag#v}" >>$GITHUB_OUTPUT
 
-  validate:
-    needs: get-latest-version-tag
-    uses: anthochamp/dev-toolbox/.github/workflows/container-validate.yml@36d45ce9f8e590f39d29858f04d073f94ebbb711
-
   acme-dns-pre-publish:
-    needs: [validate, get-latest-version-tag]
+    needs: validate
     uses: ./.github/workflows/acme-dns-pre-publish.yml
     with:
       dockerfile-dir: src

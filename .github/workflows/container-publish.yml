@@ -70,9 +70,7 @@ jobs:
 
           result=
           if docker manifest inspect $REPOSITORY:$fullVersion >/dev/null 2>/dev/null; then
-            result="true"
-          else
-            result="false"
+            result="1"
           fi
 
           echo "RESULT=$result" >>$GITHUB_OUTPUT
