@@ -8,18 +8,18 @@ jobs:
   validate:
     uses: anthochamp/dev-toolbox/.github/workflows/container-validate.yml@36d45ce9f8e590f39d29858f04d073f94ebbb711
 
-  get-latest-version-tag:
+  get-version:
     needs: validate
     uses: anthochamp/dev-toolbox/.github/workflows/util-get-latest-git-version-tag.yml@5fb0e7fda20a8d86a485ca2e32bb9bf99e53de07
 
-  acme-dns-pre-publish:
+  pre-publish:
     needs: validate
     uses: ./.github/workflows/acme-dns-pre-publish.yml
     with:
       dockerfile-dir: src
 
   publish:
-    needs: [validate, get-latest-version-tag, acme-dns-pre-publish]
+    needs: [validate, get-version, pre-publish]
     permissions:
       packages: write
       id-token: write # used for sigstore/fulcio identity challenge
@@ -27,10 +27,10 @@ jobs:
     with:
       dockerfile-dir: src
       dhub-readme-file: ./CONTAINER.md
-      version: ${{ needs.get-latest-version-tag.outputs.version }}
-      alt-version: ${{ needs.acme-dns-pre-publish.outputs.acme-sh-version }}
+      version: ${{ needs.get-version.outputs.version }}
+      alt-version: ${{ needs.pre-publish.outputs.acme-sh-version }}
       alt-version-prefix: acmesh
-      container-image-name: ${{ needs.acme-dns-pre-publish.outputs.container-image-name }}
+      container-image-name: ${{ needs.pre-publish.outputs.container-image-name }}
     secrets:
       dhub-username: ${{ secrets.DHUB_USERNAME }}
       dhub-password: ${{ secrets.DHUB_PASSWORD }}
