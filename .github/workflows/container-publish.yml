@@ -55,8 +55,8 @@ jobs:
       - name: Log into Docker Hub
         uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
         with:
-          username: ${{ secrets.DHUB_USERNAME }}
-          password: ${{ secrets.DHUB_PASSWORD }}
+          username: ${{ secrets.dhub-username }}
+          password: ${{ secrets.dhub-password }}
 
       - name: Check if full version has already been pushed
         id: check-full-version
