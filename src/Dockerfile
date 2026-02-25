@@ -28,7 +28,8 @@ RUN set -ex && \
 
 RUN acme.sh
 
-RUN crontab -l | grep acme.sh | sed 's#> /dev/null#> /proc/1/fd/1 2>/proc/1/fd/2#' | crontab -
+RUN mkdir -p /root/.cache/crontab && \
+	crontab -l | grep acme.sh | sed 's#> /dev/null#> /proc/1/fd/1 2>/proc/1/fd/2#' | crontab -
 
 VOLUME ["/var/lib/acme/"]
 

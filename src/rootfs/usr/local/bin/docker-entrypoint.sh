@@ -44,6 +44,13 @@ export ACME_DNS_CERT_KEY_FILE="${ACME_DNS_CERT_KEY_FILE:-/cert/key.pem}"
 
 if [ -n "$ACME_DNS_PROVIDER_ENV_PREFIX" ]; then
 	replaceEnvSecrets "$ACME_DNS_PROVIDER_ENV_PREFIX"
+
+	# For cron, environment variables are not inherited, so we need to add them to /etc/cron.env
+	# Filter and add only the environment variables prefixed with $ACME_DNS_PROVIDER_ENV_PREFIX
+	printenv | grep "^$ACME_DNS_PROVIDER_ENV_PREFIX" >> /etc/cron.env
+
+	# Update the cron job to source /etc/cron.env before running the command (column 6+)
+	crontab -l | awk 'NF >= 6 {$6 = ". /etc/cron.env; " $6} {print}' | crontab -
 fi
 
 if [ "$1" != "crond" ]; then
