@@ -22,14 +22,13 @@ ENV CA_HOME=/var/lib/acme/ca
 
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 
+RUN mkdir -p /root/.cache/crontab
+
 RUN set -ex && \
 	wget -q -O - https://get.acme.sh | sh && \
 	ln -s /root/.acme.sh/acme.sh /usr/local/bin/acme.sh
 
-RUN acme.sh
-
-RUN mkdir -p /root/.cache/crontab && \
-	crontab -l | grep acme.sh | sed 's#> /dev/null#> /proc/1/fd/1 2>/proc/1/fd/2#' | crontab -
+RUN crontab -l | grep acme.sh | sed 's#> /dev/null#> /proc/1/fd/1 2>/proc/1/fd/2#' | crontab -
 
 VOLUME ["/var/lib/acme/"]
 
