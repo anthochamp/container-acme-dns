@@ -41,19 +41,17 @@ export ACME_DNS_CERT_DOMAINS="${ACME_DNS_CERT_DOMAINS:-}"
 export ACME_DNS_CERT_FILE="${ACME_DNS_CERT_FILE:-/cert/cert.pem}"
 export ACME_DNS_CERT_FULLCHAIN_FILE="${ACME_DNS_CERT_FULLCHAIN_FILE:-/cert/fullchain.pem}"
 export ACME_DNS_CERT_KEY_FILE="${ACME_DNS_CERT_KEY_FILE:-/cert/key.pem}"
+export ACME_DNS_INSECURE="${ACME_DNS_INSECURE:-0}"
+export ACME_DNS_DNSSLEEP="${ACME_DNS_DNSSLEEP:-}"
+export ACME_DNS_PREFERRED_CHAIN="${ACME_DNS_PREFERRED_CHAIN:-}"
+export ACME_DNS_CHALLENGE_ALIAS="${ACME_DNS_CHALLENGE_ALIAS:-}"
+export ACME_DNS_CRON_SCHEDULE="${ACME_DNS_CRON_SCHEDULE:-26 12 * * *}"
 
 if [ -n "$ACME_DNS_PROVIDER_ENV_PREFIX" ]; then
 	replaceEnvSecrets "$ACME_DNS_PROVIDER_ENV_PREFIX"
-
-	# For cron, environment variables are not inherited, so we need to add them to /etc/cron.env
-	# Filter and add only the environment variables prefixed with $ACME_DNS_PROVIDER_ENV_PREFIX
-	printenv | grep "^$ACME_DNS_PROVIDER_ENV_PREFIX" >> /etc/cron.env
-
-	# Update the cron job to source /etc/cron.env before running the command (column 6+)
-	crontab -l | awk 'NF >= 6 {$6 = ". /etc/cron.env; " $6} {print}' | crontab -
 fi
 
-if [ "$1" != "crond" ]; then
+if [ "$1" != "supercronic" ]; then
 	exec "$@"
 fi
 
@@ -67,25 +65,41 @@ if [ -z "$ACME_DNS_CERT_DOMAINS" ]; then
 	exit 1
 fi
 
+chown -hR acme:acme /var/lib/acme
+
 main=''
-args=''
 for domain in $ACME_DNS_CERT_DOMAINS; do
 	[ -z "$main" ] && main=$domain
-	args=$args" -d "$domain
 done
 
-/root/.acme.sh/acme.sh --set-default-ca --server "$ACME_DNS_ACME_SERVER"
+acme_insecure_flag=''
+[ "$ACME_DNS_INSECURE" = '1' ] && acme_insecure_flag='--insecure'
+
+# Use a function with set -- so values with spaces (e.g. PREFERRED_CHAIN="ISRG Root X1")
+# are passed as properly quoted words rather than being word-split.
+acme_issue() {
+	set -- \
+		--dns "$ACME_DNS_PROVIDER" \
+		--keylength "$ACME_DNS_CERT_KEY_LENGTH"
+	[ "$ACME_DNS_INSECURE" = '1' ] && set -- "$@" --insecure
+	[ -n "$ACME_DNS_DNSSLEEP" ] && set -- "$@" --dnssleep "$ACME_DNS_DNSSLEEP"
+	[ -n "$ACME_DNS_PREFERRED_CHAIN" ] && set -- "$@" --preferred-chain "$ACME_DNS_PREFERRED_CHAIN"
+	[ -n "$ACME_DNS_CHALLENGE_ALIAS" ] && set -- "$@" --challenge-alias "$ACME_DNS_CHALLENGE_ALIAS"
+	for domain in $ACME_DNS_CERT_DOMAINS; do
+		set -- "$@" -d "$domain"
+	done
+	su-exec acme:acme acme.sh --issue "$@"
+}
+
+# shellcheck disable=SC2086
+su-exec acme:acme acme.sh --set-default-ca --server "$ACME_DNS_ACME_SERVER" $acme_insecure_flag
 
 if [ -n "$ACME_DNS_ACME_ACCOUNT" ]; then
-	/root/.acme.sh/acme.sh --register-account -m "$ACME_DNS_ACME_ACCOUNT"
+	su-exec acme:acme acme.sh --register-account -m "$ACME_DNS_ACME_ACCOUNT" $acme_insecure_flag
 fi
 
 set +e
-# shellcheck disable=SC2086
-/root/.acme.sh/acme.sh --issue \
-	--dns "$ACME_DNS_PROVIDER" \
-	--keylength "$ACME_DNS_CERT_KEY_LENGTH" \
-	$args
+acme_issue
 errcode=$?
 # errcode 2 is when the cert is already issued
 [ $errcode != 0 ] && [ $errcode != 2 ] && exit 1
@@ -94,10 +108,26 @@ set -e
 mkdir -p "$(dirname "$ACME_DNS_CERT_FILE")"
 mkdir -p "$(dirname "$ACME_DNS_CERT_FULLCHAIN_FILE")"
 mkdir -p "$(dirname "$ACME_DNS_CERT_KEY_FILE")"
+chown acme:acme \
+	"$(dirname "$ACME_DNS_CERT_FILE")" \
+	"$(dirname "$ACME_DNS_CERT_FULLCHAIN_FILE")" \
+	"$(dirname "$ACME_DNS_CERT_KEY_FILE")"
 
-/root/.acme.sh/acme.sh --install-cert -d "$main" \
+su-exec acme:acme acme.sh --install-cert -d "$main" \
 	--cert-file "$ACME_DNS_CERT_FILE" \
 	--fullchain-file "$ACME_DNS_CERT_FULLCHAIN_FILE" \
 	--key-file "$ACME_DNS_CERT_KEY_FILE"
 
-exec "$@"
+j2Templates="
+/etc/supercronic/crontab
+"
+
+for file in $j2Templates; do
+	export | jinja2 --format env -o "$file" "$file.j2"
+
+	# can't use --reference with alpine
+	chmod "$(stat -c '%a' "$file.j2")" "$file"
+	chown "$(stat -c '%U:%G' "$file.j2")" "$file"
+done
+
+exec su-exec acme:acme "$@"
