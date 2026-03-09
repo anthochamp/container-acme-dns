@@ -108,7 +108,7 @@ set -e
 mkdir -p "$(dirname "$ACME_DNS_CERT_FILE")"
 mkdir -p "$(dirname "$ACME_DNS_CERT_FULLCHAIN_FILE")"
 mkdir -p "$(dirname "$ACME_DNS_CERT_KEY_FILE")"
-chown acme:acme \
+chown -R acme:acme \
 	"$(dirname "$ACME_DNS_CERT_FILE")" \
 	"$(dirname "$ACME_DNS_CERT_FULLCHAIN_FILE")" \
 	"$(dirname "$ACME_DNS_CERT_KEY_FILE")"
