@@ -1,15 +1,14 @@
-import * as assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
-import { afterEach, describe, it } from "node:test";
 import { sleep } from "@ac-essentials/misc-util";
-import { initSuite } from "./common.js";
+import { afterEach, expect, suite, test } from "vitest";
+import { initSuite } from "./common";
 
 const CERT_ISSUE_TIMEOUT_MS = 60_000;
 const POLL_INTERVAL_MS = 2_000;
 const TEST_DOMAIN = "test.acme.example";
 const CERT_FILES = ["/cert/cert.pem", "/cert/fullchain.pem", "/cert/key.pem"];
 
-describe("certificate issuance", () => {
+suite.sequential("certificate issuance", () => {
 	const {
 		imageName,
 		networkName,
@@ -29,9 +28,7 @@ describe("certificate issuance", () => {
 		}
 	});
 
-	it("issues a certificate and writes files with correct permissions", {
-		timeout: CERT_ISSUE_TIMEOUT_MS + 30_000,
-	}, async () => {
+	test("issues a certificate and writes files with correct permissions", async () => {
 		const containerName = `test-acme-dns-run-${randomBytes(6).toString("hex")}`;
 		containers.push(containerName);
 
@@ -66,10 +63,10 @@ describe("certificate issuance", () => {
 			}
 		}
 
-		assert.ok(
+		expect(
 			allExist,
 			`cert files should exist within ${CERT_ISSUE_TIMEOUT_MS}ms`,
-		);
+		).toBe(true);
 
 		// Check permissions and ownership using stat inside the container
 		// stat -c '%a %u' returns "mode uid", e.g. "644 1000"
@@ -88,26 +85,22 @@ describe("certificate issuance", () => {
 		const keyStat = await statFile("/cert/key.pem");
 		const fullchainStat = await statFile("/cert/fullchain.pem");
 
-		assert.equal(
+		expect(
 			certStat.mode,
-			0o644,
 			`cert.pem mode should be 644, got ${certStat.mode.toString(8)}`,
-		);
-		assert.equal(
+		).toBe(0o644);
+		expect(
 			keyStat.mode,
-			0o600,
 			`key.pem mode should be 600, got ${keyStat.mode.toString(8)}`,
-		);
-		assert.equal(
+		).toBe(0o600);
+		expect(
 			fullchainStat.mode,
-			0o644,
 			`fullchain.pem mode should be 644, got ${fullchainStat.mode.toString(8)}`,
-		);
+		).toBe(0o644);
 
-		assert.equal(
+		expect(
 			certStat.uid,
-			1000,
 			`cert.pem should be owned by uid 1000 (acme user), got ${certStat.uid}`,
-		);
+		).toBe(1000);
 	});
 });

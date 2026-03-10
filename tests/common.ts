@@ -1,6 +1,5 @@
 import { randomBytes } from "node:crypto";
 import * as path from "node:path";
-import { after, before } from "node:test";
 import {
 	dockerBuildxBuild,
 	dockerContextShow,
@@ -8,6 +7,7 @@ import {
 	dockerImageRm,
 } from "@ac-essentials/cli";
 import { execAsync, sleep } from "@ac-essentials/misc-util";
+import { afterAll, beforeAll } from "vitest";
 
 const srcPath = path.resolve(path.join(__dirname, "..", "src"));
 const fixturesPath = path.resolve(path.join(__dirname, "fixtures"));
@@ -24,7 +24,7 @@ export function initSuite() {
 	const docker = (cmd: string) =>
 		execAsync(`docker --context default ${cmd}`, { encoding: "utf-8" });
 
-	before(async () => {
+	beforeAll(async () => {
 		initialContext = await dockerContextShow();
 		await dockerContextUse("default");
 
@@ -53,7 +53,7 @@ export function initSuite() {
 		await sleep(2000);
 	});
 
-	after(async () => {
+	afterAll(async () => {
 		try {
 			await docker(`container rm -f ${pebbleName}`);
 		} catch (_) {}
