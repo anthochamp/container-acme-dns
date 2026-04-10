@@ -1,5 +1,7 @@
 {
 	"private": true,
+	"description": "acme.sh-based container for TLS certificate automation using the DNS-01 challenge",
+	"author": "Anthony Champagne <dev@anthonychampagne.fr>",
 	"scripts": {
 		"test": "vitest run",
 		"tsc:check": "tsc -noEmit -p ./tsconfig.json",
