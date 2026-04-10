@@ -13,14 +13,21 @@ See [README.md](README.md) for full documentation.
 
 **Tag aliases:**
 
-- `x.y-acmeshA.B.C`: Latest patch of `x.y` (major.minor) with acme.sh `A.B.C`.
-- `x-acmeshA.B.C`: Latest minor+patch of `x` (major) with acme.sh `A.B.C`.
+- `x.y-acmeshA.B.C`: Latest patch of `x.y` with acme.sh `A.B.C`.
+- `x-acmeshA.B.C`: Latest minor+patch of `x` with acme.sh `A.B.C`.
+- `x.y.z-acmeshA.B`: Version `x.y.z` with latest patch of acme.sh `A.B` (only latest container version updated).
+- `x.y-acmeshA.B`: Latest patch of `x.y` with latest patch of acme.sh `A.B`.
+- `x-acmeshA.B`: Latest minor+patch of `x` with latest patch of acme.sh `A.B`.
+- `x.y.z-acmeshA`: Version `x.y.z` with latest minor+patch of acme.sh `A` (only latest container version updated).
+- `x.y-acmeshA`: Latest patch of `x.y` with latest minor+patch of acme.sh `A`.
+- `x-acmeshA`: Latest minor+patch of `x` with latest minor+patch of acme.sh `A`.
 - `x.y.z`: Version `x.y.z` with latest acme.sh (only latest container version updated).
-- `x.y`: Latest patch of `x.y` (major.minor) with latest acme.sh (only latest container major.minor updated).
-- `x`: Latest minor+patch of `x` (major) with latest acme.sh (only latest container major updated).
-- `acmeshA.B`: Latest container with latest patch of acme.sh `A.B` (major.minor).
-- `acmeshA`: Latest container with latest minor+patch of acme.sh `A` (major).
+- `x.y`: Latest patch of `x.y` with latest acme.sh.
+- `x`: Latest minor+patch of `x` with latest acme.sh.
+- `acmeshA.B.C`: Latest container with acme.sh `A.B.C`.
+- `acmeshA.B`: Latest container with latest patch of acme.sh `A.B`.
+- `acmeshA`: Latest container with latest minor+patch of acme.sh `A`.
 - `latest`: Latest `x.y.z-acmeshA.B.C` tag.
-- `edge-acmeshA.B`: Latest commit build with latest patch of acme.sh `A.B` (major.minor).
-- `edge-acmeshA`: Latest commit build with latest minor+patch of acme.sh `A` (major).
+- `edge-acmeshA.B`: Latest commit build with latest patch of acme.sh `A.B`.
+- `edge-acmeshA`: Latest commit build with latest minor+patch of acme.sh `A`.
 - `edge`: Latest `edge-acmeshA.B.C` tag.
