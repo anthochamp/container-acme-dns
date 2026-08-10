@@ -26,7 +26,7 @@ ENV LE_WORKING_DIR=/opt/acme.sh
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 
 # renovate: datasource=github-releases depName=acmesh-official/acme.sh
-ARG ACME_SH_VERSION=3.1.2
+ARG ACME_SH_VERSION=3.1.4
 
 # hadolint ignore=DL3003
 RUN set -ex; \
