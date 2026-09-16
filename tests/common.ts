@@ -1,74 +1,76 @@
 import { randomBytes } from "node:crypto";
 import * as path from "node:path";
+
 import {
-	dockerBuildxBuild,
-	dockerContextShow,
-	dockerContextUse,
-	dockerImageRm,
-} from "@ac-essentials/cli";
-import { execAsync, sleep } from "@ac-essentials/misc-util";
+	dockerContainerRm,
+	dockerContainerRun,
+	dockerNetworkCreate,
+	dockerNetworkRm,
+} from "@ac-kit/cmd-docker";
+import { sleep } from "@ac-kit/core";
+import { initDockerSuite } from "@ac-kit/integration-test-util";
 import { afterAll, beforeAll } from "vitest";
 
 const srcPath = path.resolve(path.join(__dirname, "..", "src"));
 const fixturesPath = path.resolve(path.join(__dirname, "fixtures"));
 
 export function initSuite() {
-	let initialContext: string;
-
 	const suffix = randomBytes(8).toString("hex");
-	const imageName = `test-acme-dns-img-${suffix}`;
-	const networkName = `test-acme-dns-net-${suffix}`;
-	const pebbleName = `test-acme-dns-pebble-${suffix}`;
-	const challName = `test-acme-dns-chall-${suffix}`;
+	const networkName = `test-acme-dns-${suffix}-net`;
+	const pebbleName = `test-acme-dns-${suffix}-pebble`;
+	const challName = `test-acme-dns-${suffix}-chall`;
 
-	const docker = (cmd: string) =>
-		execAsync(`docker --context default ${cmd}`, { encoding: "utf-8" });
+	const { containerImageName: imageName } = initDockerSuite(srcPath, {
+		containerNamePrefix: "test-acme-dns-",
+	});
 
 	beforeAll(async () => {
-		initialContext = await dockerContextShow();
-		await dockerContextUse("default");
-
-		try {
-			await dockerImageRm([imageName], { force: true });
-		} catch (_) {}
-
-		await dockerBuildxBuild(srcPath, { tags: [imageName] });
-
-		await docker(`network create ${networkName}`);
+		await dockerNetworkCreate(networkName);
 
 		// challtestsrv: DNS resolver + HTTP management API for ACME challenge records
-		await docker(
-			`run -d --name ${challName} --network ${networkName} ghcr.io/letsencrypt/pebble-challtestsrv`,
-		);
+		await dockerContainerRun("ghcr.io/letsencrypt/pebble-challtestsrv", {
+			detach: true,
+			name: challName,
+			network: networkName,
+		});
 
 		// pebble: lightweight ACME server using challtestsrv as its DNS resolver
-		await docker(
-			`run -d --name ${pebbleName} --network ${networkName}` +
-				` -e PEBBLE_VA_NOSLEEP=1` +
-				` ghcr.io/letsencrypt/pebble` +
-				` -dnsserver ${challName}:8053`,
-		);
+		await dockerContainerRun("ghcr.io/letsencrypt/pebble", {
+			detach: true,
+			name: pebbleName,
+			network: networkName,
+			command: "-dnsserver",
+			commandArgs: [`${challName}:8053`],
+			env: { PEBBLE_VA_NOSLEEP: "1" },
+		});
 
 		// Give pebble a moment to start
 		await sleep(2000);
 	});
 
 	afterAll(async () => {
-		try {
-			await docker(`container rm -f ${pebbleName}`);
-		} catch (_) {}
-		try {
-			await docker(`container rm -f ${challName}`);
-		} catch (_) {}
-		try {
-			await docker(`network rm ${networkName}`);
-		} catch (_) {}
-		try {
-			await dockerImageRm([imageName], { force: true });
-		} catch (_) {}
-		try {
-			await dockerContextUse(initialContext);
-		} catch (_) {}
+		// Every step runs even when an earlier one throws, or a container that
+		// refuses to die would strand the network for the rest of the suite.
+		const failures: unknown[] = [];
+
+		for (const step of [
+			() => dockerContainerRm([pebbleName], { force: true }),
+			() => dockerContainerRm([challName], { force: true }),
+			() => dockerNetworkRm([networkName]),
+		]) {
+			try {
+				await step();
+			} catch (error) {
+				failures.push(error);
+			}
+		}
+
+		if (failures.length === 1) {
+			throw failures[0];
+		}
+		if (failures.length > 1) {
+			throw new AggregateError(failures, "acme-dns suite cleanup failed");
+		}
 	});
 
 	return {
@@ -77,6 +79,5 @@ export function initSuite() {
 		challName,
 		pebbleAcmeDir: `https://${pebbleName}:14000/dir`,
 		fixturesPath,
-		docker,
 	};
 }

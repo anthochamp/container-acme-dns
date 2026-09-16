@@ -1,6 +1,9 @@
 import { randomBytes } from "node:crypto";
-import { sleep } from "@ac-essentials/misc-util";
-import { afterEach, expect, suite, test } from "vitest";
+
+import { dockerContainerExec, dockerContainerRm, dockerContainerRun } from "@ac-kit/cmd-docker";
+import { sleep } from "@ac-kit/core";
+import { afterEach, expect, describe, it } from "vitest";
+
 import { initSuite } from "./common";
 
 const CERT_ISSUE_TIMEOUT_MS = 60_000;
@@ -8,45 +11,37 @@ const POLL_INTERVAL_MS = 2_000;
 const TEST_DOMAIN = "test.acme.example";
 const CERT_FILES = ["/cert/cert.pem", "/cert/fullchain.pem", "/cert/key.pem"];
 
-suite.sequential("certificate issuance", () => {
-	const {
-		imageName,
-		networkName,
-		challName,
-		pebbleAcmeDir,
-		fixturesPath,
-		docker,
-	} = initSuite();
+describe("certificate issuance", () => {
+	const { imageName, networkName, challName, pebbleAcmeDir, fixturesPath } = initSuite();
 
 	const containers: string[] = [];
 
 	afterEach(async () => {
 		for (const name of containers.splice(0)) {
-			try {
-				await docker(`container rm -f ${name}`);
-			} catch (_) {}
+			await dockerContainerRm([name], { force: true });
 		}
 	});
 
-	test("issues a certificate and writes files with correct permissions", async () => {
+	it("issues a certificate and writes files with correct permissions", async () => {
 		const containerName = `test-acme-dns-run-${randomBytes(6).toString("hex")}`;
-		containers.push(containerName);
-
 		const hookSrc = `${fixturesPath}/dns_challtestsrv.sh`;
 		const hookDst = "/opt/acme.sh/dnsapi/dns_challtestsrv.sh";
 
-		await docker(
-			`run -d --name ${containerName}` +
-				` --network ${networkName}` +
-				` -v ${hookSrc}:${hookDst}:ro` +
-				` -e ACME_DNS_ACME_SERVER=${pebbleAcmeDir}` +
-				` -e ACME_DNS_PROVIDER=dns_challtestsrv` +
-				` -e ACME_DNS_CERT_DOMAINS=${TEST_DOMAIN}` +
-				` -e CHALLTESTSRV_URL=http://${challName}:8055` +
-				` -e ACME_DNS_INSECURE=1` +
-				` -e ACME_DNS_DNSSLEEP=0` +
-				` ${imageName}`,
-		);
+		await dockerContainerRun(imageName, {
+			detach: true,
+			name: containerName,
+			network: networkName,
+			volume: [`${hookSrc}:${hookDst}:ro`],
+			env: {
+				ACME_DNS_ACME_SERVER: pebbleAcmeDir,
+				ACME_DNS_PROVIDER: "dns_challtestsrv",
+				ACME_DNS_CERT_DOMAINS: TEST_DOMAIN,
+				CHALLTESTSRV_URL: `http://${challName}:8055`,
+				ACME_DNS_INSECURE: "1",
+				ACME_DNS_DNSSLEEP: "0",
+			},
+		});
+		containers.push(containerName);
 
 		// Poll until all cert files appear inside the container, or timeout
 		const deadline = Date.now() + CERT_ISSUE_TIMEOUT_MS;
@@ -54,26 +49,25 @@ suite.sequential("certificate issuance", () => {
 		while (Date.now() < deadline) {
 			try {
 				for (const f of CERT_FILES) {
-					await docker(`exec ${containerName} test -f ${f}`);
+					await dockerContainerExec(containerName, "test", {
+						commandArgs: ["-f", f],
+					});
 				}
 				allExist = true;
 				break;
-			} catch (_) {
+			} catch {
 				await sleep(POLL_INTERVAL_MS);
 			}
 		}
 
-		expect(
-			allExist,
-			`cert files should exist within ${CERT_ISSUE_TIMEOUT_MS}ms`,
-		).toBe(true);
+		expect(allExist, `cert files should exist within ${CERT_ISSUE_TIMEOUT_MS}ms`).toBe(true);
 
 		// Check permissions and ownership using stat inside the container
 		// stat -c '%a %u' returns "mode uid", e.g. "644 1000"
 		const statFile = async (file: string) => {
-			const { stdout } = (await docker(
-				`exec ${containerName} stat -c %a_%u ${file}`,
-			)) as unknown as { stdout: string };
+			const { stdout } = await dockerContainerExec(containerName, "stat", {
+				commandArgs: ["-c", "%a_%u", file],
+			});
 			const parts = stdout.trim().split("_");
 			return {
 				mode: Number.parseInt(parts[0] ?? "0", 8),
@@ -85,14 +79,10 @@ suite.sequential("certificate issuance", () => {
 		const keyStat = await statFile("/cert/key.pem");
 		const fullchainStat = await statFile("/cert/fullchain.pem");
 
-		expect(
-			certStat.mode,
-			`cert.pem mode should be 644, got ${certStat.mode.toString(8)}`,
-		).toBe(0o644);
-		expect(
-			keyStat.mode,
-			`key.pem mode should be 600, got ${keyStat.mode.toString(8)}`,
-		).toBe(0o600);
+		expect(certStat.mode, `cert.pem mode should be 644, got ${certStat.mode.toString(8)}`).toBe(
+			0o644,
+		);
+		expect(keyStat.mode, `key.pem mode should be 600, got ${keyStat.mode.toString(8)}`).toBe(0o600);
 		expect(
 			fullchainStat.mode,
 			`fullchain.pem mode should be 644, got ${fullchainStat.mode.toString(8)}`,

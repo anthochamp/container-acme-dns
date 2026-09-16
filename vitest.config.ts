@@ -1,8 +1,8 @@
-import { defineConfig } from "vitest/config";
+import { defineProject } from "@ac-kit/vitest-config";
 
-export default defineConfig({
+export default defineProject({
 	test: {
-		testTimeout: 90000,
-		hookTimeout: 120000,
+		testTimeout: 90_000,
+		hookTimeout: 60_000,
 	},
 });
