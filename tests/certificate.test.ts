@@ -1,6 +1,10 @@
 import { randomBytes } from "node:crypto";
 
-import { dockerContainerExec, dockerContainerRm, dockerContainerRun } from "@ac-kit/cmd-docker";
+import {
+	dockerContainerExec,
+	dockerContainerRm,
+	dockerContainerRun,
+} from "@ac-kit/cmd-docker";
 import { sleep } from "@ac-kit/core";
 import { afterEach, expect, describe, it } from "vitest";
 
@@ -12,7 +16,8 @@ const TEST_DOMAIN = "test.acme.example";
 const CERT_FILES = ["/cert/cert.pem", "/cert/fullchain.pem", "/cert/key.pem"];
 
 describe("certificate issuance", () => {
-	const { imageName, networkName, challName, pebbleAcmeDir, fixturesPath } = initSuite();
+	const { imageName, networkName, challName, pebbleAcmeDir, fixturesPath } =
+		initSuite();
 
 	const containers: string[] = [];
 
@@ -60,7 +65,10 @@ describe("certificate issuance", () => {
 			}
 		}
 
-		expect(allExist, `cert files should exist within ${CERT_ISSUE_TIMEOUT_MS}ms`).toBe(true);
+		expect(
+			allExist,
+			`cert files should exist within ${CERT_ISSUE_TIMEOUT_MS}ms`,
+		).toBe(true);
 
 		// Check permissions and ownership using stat inside the container
 		// stat -c '%a %u' returns "mode uid", e.g. "644 1000"
@@ -79,10 +87,14 @@ describe("certificate issuance", () => {
 		const keyStat = await statFile("/cert/key.pem");
 		const fullchainStat = await statFile("/cert/fullchain.pem");
 
-		expect(certStat.mode, `cert.pem mode should be 644, got ${certStat.mode.toString(8)}`).toBe(
-			0o644,
-		);
-		expect(keyStat.mode, `key.pem mode should be 600, got ${keyStat.mode.toString(8)}`).toBe(0o600);
+		expect(
+			certStat.mode,
+			`cert.pem mode should be 644, got ${certStat.mode.toString(8)}`,
+		).toBe(0o644);
+		expect(
+			keyStat.mode,
+			`key.pem mode should be 600, got ${keyStat.mode.toString(8)}`,
+		).toBe(0o600);
 		expect(
 			fullchainStat.mode,
 			`fullchain.pem mode should be 644, got ${fullchainStat.mode.toString(8)}`,
